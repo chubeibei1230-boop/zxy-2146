@@ -38,7 +38,9 @@ export function createInitialState() {
     accumulatedStrategyPoints: 0,
     allocationHistory: [],
     showReport: false,
-    role: 'planner'
+    role: 'planner',
+    regionObjective: null,
+    currentRoundObjectiveResult: null
   }
 }
 

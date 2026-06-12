@@ -10,10 +10,64 @@
       <p class="cycle-subtitle">第 {{ cycle }} 周目结算</p>
     </div>
 
+    <div v-if="summary.objectiveSummary" class="objective-cycle-section">
+      <div class="obj-cycle-header">
+        <div class="obj-icon-lg">
+          <span class="obj-icon-inner">{{ summary.objectiveSummary.icon }}</span>
+          <div>
+            <h3 class="obj-title-lg">{{ summary.objectiveSummary.name }}</h3>
+            <div class="obj-desc-sm">{{ summary.objectiveSummary.description }}</div>
+          </div>
+        </div>
+        <div class="obj-final-tier">
+          <div class="tier-circle" :class="'tier-circle-' + summary.objectiveSummary.finalTier">
+            <span class="tier-circle-label">周期评级</span>
+            <span class="tier-circle-value">{{ summary.objectiveSummary.finalTier }}</span>
+          </div>
+          <div class="tier-circle-sub">{{ summary.objectiveSummary.finalTierLabel }}</div>
+        </div>
+      </div>
+
+      <div class="obj-cycle-stats">
+        <div class="obj-stat">
+          <div class="obj-stat-label">平均完成度</div>
+          <div class="obj-stat-value big">{{ (summary.objectiveSummary.avgCompletionRatio * 100).toFixed(0) }}%</div>
+        </div>
+        <div class="obj-stat highlight-stat">
+          <div class="obj-stat-label">目标奖励策略点</div>
+          <div class="obj-stat-value strategy-text">💎 +{{ summary.objectiveBonusSP || summary.objectiveSummary.totalBonusSP }}</div>
+        </div>
+        <div class="obj-stat">
+          <div class="obj-stat-label">平均得分倍率</div>
+          <div class="obj-stat-value">×{{ summary.objectiveScoreMultiplier ? summary.objectiveScoreMultiplier.toFixed(2) : summary.objectiveSummary.avgScoreMultiplier.toFixed(2) }}</div>
+        </div>
+      </div>
+
+      <div class="obj-cycle-metric-row">
+        <div class="obj-stat-label-row">
+          <span>{{ summary.objectiveSummary.metric }}</span>
+          <span>目标 {{ formatTarget(summary.objectiveSummary) }}</span>
+        </div>
+        <div class="obj-tier-breakdown">
+          <div
+            v-for="(tierInfo, index) in sortedTierList"
+            :key="tierInfo.tier"
+            class="tier-breakdown-item"
+          >
+            <span class="tier-badge-mini" :class="'tier-mini-' + tierInfo.tier">{{ tierInfo.tier }}</span>
+            <span class="tier-count">{{ summary.objectiveSummary.tierBreakdown[tierInfo.tier] || 0 }} 回合</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="overall-score-section">
       <div class="big-score">
         <span class="big-score-label">总得分</span>
         <span class="big-score-value">{{ summary.totalScore }}</span>
+        <div v-if="summary.objectiveScoreMultiplier && summary.objectiveScoreMultiplier !== 1.0" class="big-score-sub">
+          含目标加成 ×{{ summary.objectiveScoreMultiplier.toFixed(2) }}
+        </div>
       </div>
     </div>
 
@@ -57,6 +111,8 @@
           <div class="stat-content">
             <span class="stat-title">获得策略点</span>
             <span class="stat-num strategy">{{ summary.strategyPoints }}</span>
+            <span v-if="summary.objectiveBonusSP > 0" class="stat-sub">
+              含目标奖励 +{{ summary.objectiveBonusSP }}</span>
           </div>
         </div>
       </div>
@@ -69,7 +125,7 @@
           <div>
             <span class="rule-title">资源加成</span>
             <span class="rule-desc">
-              将满意度 × 50 + 供货能力 × 30 + 总分 / 100 = {{ summary.strategyPoints }} 策略点
+              策略点 = 满意度×50 + 供货能力×30 + 总分/100 + 目标奖励 {{ summary.objectiveBonusSP || 0 }} = {{ summary.strategyPoints }}
             </span>
           </div>
         </div>
@@ -106,6 +162,11 @@
 </template>
 
 <script setup>
+import { createRegionObjectiveEngine } from '../utils/regionObjective.js'
+import { OBJECTIVE_COMPLETION_TIERS } from '../config/constants.js'
+
+const engine = createRegionObjectiveEngine()
+
 const props = defineProps({
   summary: {
     type: Object,
@@ -122,6 +183,12 @@ const props = defineProps({
 })
 
 defineEmits(['nextCycle', 'backToMenu'])
+
+const sortedTierList = OBJECTIVE_COMPLETION_TIERS.map(t => ({ tier: t.tier, label: t.label }))
+
+function formatTarget(summaryObj) {
+  return engine.formatTargetValue(summaryObj.type, summaryObj.targetValue)
+}
 
 function getSatisfactionClass(sat) {
   if (sat >= 0.75) return 'success'
@@ -157,7 +224,7 @@ function getUnlockedText() {
 
 <style scoped>
 .cycle-complete {
-  max-width: 700px;
+  max-width: 780px;
   margin: 20px auto;
   padding: 40px;
   text-align: center;
@@ -221,6 +288,186 @@ function getUnlockedText() {
   font-size: 16px;
 }
 
+.objective-cycle-section {
+  margin: 24px 0 30px;
+  padding: 24px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 50%, #ecfdf5 100%);
+  border: 3px solid #fbbf24;
+  border-radius: 18px;
+  text-align: left;
+}
+
+.obj-cycle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.obj-icon-lg {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1;
+}
+
+.obj-icon-inner {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.obj-title-lg {
+  font-size: 20px;
+  font-weight: 700;
+  color: #78350f;
+  margin: 0 0 4px;
+}
+
+.obj-desc-sm {
+  font-size: 13px;
+  color: #92400e;
+  opacity: 0.9;
+}
+
+.obj-final-tier {
+  text-align: center;
+}
+
+.tier-circle {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.tier-circle-S { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.tier-circle-A { background: linear-gradient(135deg, #10b981, #059669); }
+.tier-circle-B { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.tier-circle-C { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.tier-circle-D { background: linear-gradient(135deg, #64748b, #475569); }
+
+.tier-circle-label {
+  font-size: 11px;
+  opacity: 0.95;
+}
+
+.tier-circle-value {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tier-circle-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #78350f;
+}
+
+.obj-cycle-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.obj-stat {
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.obj-stat.highlight-stat {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(16, 185, 129, 0.12));
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.obj-stat-label {
+  font-size: 12px;
+  color: #92400e;
+  margin-bottom: 4px;
+  opacity: 0.9;
+}
+
+.obj-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #78350f;
+}
+
+.obj-stat-value.big {
+  font-size: 28px;
+  color: #065f46;
+}
+
+.obj-stat-value.strategy-text {
+  color: #b45309;
+  font-size: 24px;
+}
+
+.obj-cycle-metric-row {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+}
+
+.obj-stat-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: #78350f;
+  margin-bottom: 10px;
+}
+
+.obj-tier-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tier-breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: white;
+  border-radius: 20px;
+}
+
+.tier-badge-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tier-mini-S { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.tier-mini-A { background: linear-gradient(135deg, #10b981, #059669); }
+.tier-mini-B { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.tier-mini-C { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.tier-mini-D { background: linear-gradient(135deg, #64748b, #475569); }
+
+.tier-count {
+  font-size: 12px;
+  color: #78350f;
+  font-weight: 600;
+}
+
 .overall-score-section {
   margin: 30px 0;
   padding: 24px;
@@ -244,6 +491,15 @@ function getUnlockedText() {
   font-size: 56px;
   font-weight: 900;
   color: var(--primary-color);
+}
+
+.big-score-sub {
+  font-size: 12px;
+  color: #4f46e5;
+  margin-top: 4px;
+  background: rgba(79, 70, 229, 0.1);
+  padding: 2px 10px;
+  border-radius: 10px;
 }
 
 .stats-grid {
@@ -275,6 +531,7 @@ function getUnlockedText() {
 .stat-content {
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
 .stat-title {
@@ -294,6 +551,12 @@ function getUnlockedText() {
 .stat-num.strategy {
   color: #f59e0b;
   font-size: 26px;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: #92400e;
+  margin-top: 2px;
 }
 
 .inheritance-section {

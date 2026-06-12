@@ -6,12 +6,14 @@ import {
 import { createStoreFactory, createRiskEventFactory, createResourcePoolFactory } from '../utils/factory.js'
 import { createSettlementEngine } from '../utils/settlement.js'
 import { createSaveSystem } from '../utils/saveSystem.js'
+import { createRegionObjectiveEngine } from '../utils/regionObjective.js'
 
 const storeFactory = createStoreFactory()
 const riskFactory = createRiskEventFactory()
 const resourcePoolFactory = createResourcePoolFactory()
 const settlementEngine = createSettlementEngine()
 const saveSystem = createSaveSystem()
+const regionObjectiveEngine = createRegionObjectiveEngine()
 
 export function useRoundFlow(gameState, serializeState, onStateChange) {
   function getDifficultyMultiplier() {
@@ -64,6 +66,13 @@ export function useRoundFlow(gameState, serializeState, onStateChange) {
     gameState.cycleSummary = null
     gameState.allocationHistory = []
     gameState.unlocks = saveSystem.getUnlocks()
+    gameState.currentRoundObjectiveResult = null
+
+    gameState.regionObjective = regionObjectiveEngine.generateCycleObjective(
+      gameState.settings.difficulty,
+      gameState.currentCycle,
+      gameState.settings.storeCount
+    )
 
     initRound()
     gameState.phase = GAME_PHASES.PLANNING
@@ -77,13 +86,44 @@ export function useRoundFlow(gameState, serializeState, onStateChange) {
     }
 
     gameState.currentRound++
+    gameState.currentRoundObjectiveResult = null
     initRound()
     gameState.phase = GAME_PHASES.PLANNING
     onStateChange?.()
   }
 
   function finishCycle() {
-    const summary = settlementEngine.calculateCycleSummary(gameState.roundResults)
+    const baseSummary = settlementEngine.calculateCycleSummary(gameState.roundResults)
+
+    let objectiveSummary = null
+    let totalBonusSP = 0
+    let avgMultiplier = 1.0
+    if (gameState.regionObjective && gameState.regionObjective.roundResults && gameState.regionObjective.roundResults.length > 0) {
+      objectiveSummary = regionObjectiveEngine.summarizeCycleObjective(gameState.regionObjective)
+      if (objectiveSummary) {
+        totalBonusSP = objectiveSummary.totalBonusSP
+        avgMultiplier = objectiveSummary.avgScoreMultiplier
+      }
+    }
+
+    const finalTotalScore = Math.round(baseSummary.totalScore * avgMultiplier)
+    const finalStrategyPoints = baseSummary.strategyPoints + totalBonusSP
+    const finalGrade = settlementEngine.calculateGrade(
+      finalTotalScore,
+      baseSummary.avgSatisfaction,
+      baseSummary.avgStockoutRate
+    )
+
+    const summary = {
+      ...baseSummary,
+      totalScore: finalTotalScore,
+      strategyPoints: finalStrategyPoints,
+      grade: finalGrade,
+      objectiveSummary,
+      objectiveBonusSP: totalBonusSP,
+      objectiveScoreMultiplier: avgMultiplier
+    }
+
     gameState.cycleSummary = summary
     gameState.phase = GAME_PHASES.CYCLE_COMPLETE
 
@@ -121,6 +161,8 @@ export function useRoundFlow(gameState, serializeState, onStateChange) {
     gameState.stores = []
     gameState.roundResults = []
     gameState.currentRoundResult = null
+    gameState.regionObjective = null
+    gameState.currentRoundObjectiveResult = null
   }
 
   function loadSavedGame() {
@@ -140,6 +182,16 @@ export function useRoundFlow(gameState, serializeState, onStateChange) {
     gameState.accumulatedStrategyPoints = saved.accumulatedStrategyPoints || 0
     gameState.unlocks = saveSystem.getUnlocks()
     gameState.showReport = saved.phase === GAME_PHASES.SETTLEMENT
+    gameState.regionObjective = saved.regionObjective || null
+    gameState.currentRoundObjectiveResult = saved.currentRoundObjectiveResult || null
+
+    if (!gameState.regionObjective) {
+      gameState.regionObjective = regionObjectiveEngine.generateCycleObjective(
+        gameState.settings.difficulty,
+        gameState.currentCycle,
+        gameState.settings.storeCount
+      )
+    }
 
     return true
   }

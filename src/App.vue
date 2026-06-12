@@ -45,6 +45,9 @@
           :round="gameState.currentRound"
           :total-rounds="gameState.totalRounds"
           :strategy-points="gameState.accumulatedStrategyPoints"
+          :region-objective="gameState.regionObjective"
+          :phase="gameState.phase"
+          :current-round-objective-result="gameState.currentRoundObjectiveResult"
         />
 
         <GameControls
@@ -71,6 +74,8 @@
           v-if="gameState.phase === 'settlement' && gameState.currentRoundResult"
           :result="gameState.currentRoundResult"
           :round="gameState.currentRound"
+          :objective-result="gameState.currentRoundObjectiveResult"
+          :region-objective="gameState.regionObjective"
         />
 
         <NextRoundBar

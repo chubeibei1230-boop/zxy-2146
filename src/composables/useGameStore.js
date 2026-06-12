@@ -23,7 +23,9 @@ export function useGameStore() {
       currentRoundResult: gameState.currentRoundResult ? JSON.parse(JSON.stringify(gameState.currentRoundResult)) : null,
       cycleSummary: gameState.cycleSummary ? JSON.parse(JSON.stringify(gameState.cycleSummary)) : null,
       allocationHistory: JSON.parse(JSON.stringify(gameState.allocationHistory)),
-      accumulatedStrategyPoints: gameState.accumulatedStrategyPoints
+      accumulatedStrategyPoints: gameState.accumulatedStrategyPoints,
+      regionObjective: gameState.regionObjective ? JSON.parse(JSON.stringify(gameState.regionObjective)) : null,
+      currentRoundObjectiveResult: gameState.currentRoundObjectiveResult ? JSON.parse(JSON.stringify(gameState.currentRoundObjectiveResult)) : null
     }
   }
 

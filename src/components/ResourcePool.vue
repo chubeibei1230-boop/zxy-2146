@@ -8,6 +8,76 @@
       </div>
     </div>
 
+    <div class="objective-section" v-if="regionObjective && phase === 'planning'">
+      <div class="objective-card">
+        <div class="objective-header">
+          <div class="objective-icon-name">
+            <span class="objective-icon">{{ regionObjective.icon }}</span>
+            <div>
+              <div class="objective-title">
+                <span class="obj-label">本周目区域目标</span>
+                <span class="obj-name">{{ regionObjective.name }}</span>
+              </div>
+              <div class="objective-short-desc">{{ regionObjective.shortDesc }}</div>
+            </div>
+          </div>
+          <div class="objective-target">
+            <div class="target-metric">{{ regionObjective.metric }}</div>
+            <div class="target-value" :class="getObjectiveValueClass(regionObjective.type)">
+              {{ formatObjectiveTarget(regionObjective) }}
+            </div>
+          </div>
+        </div>
+        <div class="objective-description">
+          📌 {{ regionObjective.description }}
+        </div>
+        <div class="objective-guidance">
+          💡 <strong>分配引导：</strong>{{ regionObjective.guidance }}
+        </div>
+        <div class="objective-rounds mt-2">
+          <span class="text-sm text-secondary">
+            本目标将贯穿本周期全部 {{ totalRounds }} 回合，每周达成情况将累计影响最终评级与奖励
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="objective-section" v-if="regionObjective && phase === 'settlement' && currentRoundObjectiveResult">
+      <div class="objective-card">
+        <div class="objective-header">
+          <div class="objective-icon-name">
+            <span class="objective-icon">{{ regionObjective.icon }}</span>
+            <div>
+              <div class="objective-title">
+                <span class="obj-label">本周目区域目标</span>
+                <span class="obj-name">{{ regionObjective.name }}</span>
+              </div>
+              <div class="tier-badge" :class="'tier-' + currentRoundObjectiveResult.tier">
+                {{ currentRoundObjectiveResult.tierLabel }}
+              </div>
+            </div>
+          </div>
+          <div class="objective-target">
+            <div class="target-metric">本回合完成情况</div>
+            <div class="completion-ratio">{{ (currentRoundObjectiveResult.completionRatio * 100).toFixed(0) }}%</div>
+          </div>
+        </div>
+        <div class="objective-round-progress">
+          <div class="progress-label">
+            <span>实际：{{ formatObjectiveActual(regionObjective.type, currentRoundObjectiveResult.actualValue) }}</span>
+            <span>目标：{{ formatObjectiveTarget(regionObjective) }}</span>
+          </div>
+          <div class="progress-bar">
+            <div
+              class="progress-fill tier-fill"
+              :class="'fill-' + currentRoundObjectiveResult.tier"
+              :style="{ width: Math.min(100, currentRoundObjectiveResult.completionRatio * 100) + '%' }"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="resources-grid">
       <div
         v-for="(info, key) in resourceInfo"
@@ -43,6 +113,11 @@
 </template>
 
 <script setup>
+import { createRegionObjectiveEngine } from '../utils/regionObjective.js'
+import { REGION_OBJECTIVE_TYPES } from '../config/constants.js'
+
+const engine = createRegionObjectiveEngine()
+
 defineProps({
   resourceInfo: {
     type: Object,
@@ -71,6 +146,18 @@ defineProps({
   strategyPoints: {
     type: Number,
     default: 0
+  },
+  regionObjective: {
+    type: Object,
+    default: null
+  },
+  phase: {
+    type: String,
+    default: 'planning'
+  },
+  currentRoundObjectiveResult: {
+    type: Object,
+    default: null
   }
 })
 
@@ -79,6 +166,25 @@ function getProgressColor(remaining, total) {
   if (ratio > 0.5) return '#10b981'
   if (ratio > 0.2) return '#f59e0b'
   return '#ef4444'
+}
+
+function formatObjectiveTarget(objective) {
+  if (!objective) return ''
+  return engine.formatTargetValue(objective.type, objective.targetValue)
+}
+
+function formatObjectiveActual(type, value) {
+  return engine.formatActualValue(type, value)
+}
+
+function getObjectiveValueClass(type) {
+  switch (type) {
+    case REGION_OBJECTIVE_TYPES.CUSTOMER_SATISFACTION:
+    case REGION_OBJECTIVE_TYPES.OVERALL_BALANCE:
+      return 'value-target-high'
+    default:
+      return 'value-target-low'
+  }
 }
 </script>
 
@@ -103,6 +209,152 @@ function getProgressColor(remaining, total) {
   display: flex;
   gap: 8px;
 }
+
+.objective-section {
+  margin-bottom: 20px;
+}
+
+.objective-card {
+  padding: 18px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 50%, #ecfdf5 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 14px;
+}
+
+.objective-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.objective-icon-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.objective-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.objective-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.obj-label {
+  font-size: 12px;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.obj-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #78350f;
+}
+
+.objective-short-desc {
+  font-size: 13px;
+  color: #78350f;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+.tier-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+}
+
+.tier-S { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.tier-A { background: linear-gradient(135deg, #10b981, #059669); }
+.tier-B { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.tier-C { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.tier-D { background: linear-gradient(135deg, #64748b, #475569); }
+
+.objective-target {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.target-metric {
+  font-size: 12px;
+  color: #92400e;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.target-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #b45309;
+}
+
+.value-target-high { color: #047857; }
+.value-target-low { color: #b45309; }
+
+.completion-ratio {
+  font-size: 28px;
+  font-weight: 800;
+  color: #065f46;
+}
+
+.objective-description {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #78350f;
+  margin-bottom: 8px;
+}
+
+.objective-guidance {
+  padding: 10px 12px;
+  background: rgba(6, 95, 70, 0.08);
+  border-left: 4px solid #059669;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  color: #064e3b;
+  line-height: 1.5;
+}
+
+.objective-round-progress {
+  padding: 8px 0;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #78350f;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.tier-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.fill-S { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.fill-A { background: linear-gradient(90deg, #059669, #10b981); }
+.fill-B { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+.fill-C { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+.fill-D { background: linear-gradient(90deg, #475569, #64748b); }
 
 .resources-grid {
   display: grid;
@@ -165,5 +417,21 @@ function getProgressColor(remaining, total) {
 .strategy-points {
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.mt-4 {
+  margin-top: 16px;
 }
 </style>

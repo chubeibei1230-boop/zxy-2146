@@ -5,6 +5,70 @@
       <div class="total-score-badge">
         <span class="score-label">本回合得分</span>
         <span class="score-value">{{ result.summary.roundScore }}</span>
+        <div v-if="result.summary.objectiveMultiplier && result.summary.objectiveMultiplier !== 1.0" class="score-adjust">
+          基础 {{ result.summary.baseRoundScore }} × {{ result.summary.objectiveMultiplier.toFixed(2) }}
+          <span v-if="result.summary.objectiveBonusSP > 0">+{{ result.summary.objectiveBonusSP }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="objectiveResult" class="objective-report-section">
+      <div class="objective-report-header">
+        <div class="obj-title-wrap">
+          <span class="obj-icon">{{ regionObjective?.icon || '🎯' }}</span>
+          <div>
+            <h4 class="obj-report-title">
+              区域目标：{{ regionObjective?.name || '目标' }}
+              <span class="tier-tag" :class="'tier-bg-' + objectiveResult.tier">
+                {{ objectiveResult.tierLabel }}
+              </span>
+            </h4>
+            <div class="obj-report-metric">
+              {{ objectiveResult.metricLabel }}：
+              <span class="actual">{{ formatActualValue(objectiveResult.actualValue) }}</span>
+              / 目标 {{ formatTargetValue(objectiveResult.targetValue) }}
+            </div>
+          </div>
+        </div>
+        <div class="obj-completion">
+          <div class="completion-percent" :class="'text-tier-' + objectiveResult.tier">
+            {{ (objectiveResult.completionRatio * 100).toFixed(0) }}%
+          </div>
+          <div class="completion-rewards">
+            <span v-if="objectiveResult.bonusSP > 0" class="reward-sp">💎 +{{ objectiveResult.bonusSP }}</span>
+            <span class="reward-mul">×{{ objectiveResult.scoreMultiplier.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="obj-progress-big">
+        <div
+          class="progress-fill big-fill"
+          :class="'fill-' + objectiveResult.tier"
+          :style="{ width: Math.min(100, objectiveResult.completionRatio * 100) + '%' }"
+        ></div>
+      </div>
+
+      <div class="obj-factors-grid">
+        <div v-if="objectiveResult.positiveFactors && objectiveResult.positiveFactors.length > 0" class="factors-col positive">
+          <div class="factors-title">✅ 达成因素</div>
+          <ul class="factors-list">
+            <li v-for="(f, i) in objectiveResult.positiveFactors" :key="'p'+i">{{ f }}</li>
+          </ul>
+        </div>
+        <div v-if="objectiveResult.negativeFactors && objectiveResult.negativeFactors.length > 0" class="factors-col negative">
+          <div class="factors-title">⚠️ 问题因素</div>
+          <ul class="factors-list">
+            <li v-for="(f, i) in objectiveResult.negativeFactors" :key="'n'+i">{{ f }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div v-if="objectiveResult.suggestions && objectiveResult.suggestions.length > 0" class="obj-suggestions">
+        <div class="suggest-title">💡 经营建议</div>
+        <ul class="suggest-list">
+          <li v-for="(s, i) in objectiveResult.suggestions" :key="'s'+i">{{ s }}</li>
+        </ul>
       </div>
     </div>
 
@@ -137,7 +201,11 @@
 </template>
 
 <script setup>
-defineProps({
+import { createRegionObjectiveEngine } from '../utils/regionObjective.js'
+
+const engine = createRegionObjectiveEngine()
+
+const props = defineProps({
   result: {
     type: Object,
     required: true
@@ -145,8 +213,26 @@ defineProps({
   round: {
     type: Number,
     default: 1
+  },
+  objectiveResult: {
+    type: Object,
+    default: null
+  },
+  regionObjective: {
+    type: Object,
+    default: null
   }
 })
+
+function formatActualValue(value) {
+  if (!props.regionObjective) return value
+  return engine.formatActualValue(props.regionObjective.type, value)
+}
+
+function formatTargetValue(value) {
+  if (!props.regionObjective) return value
+  return engine.formatTargetValue(props.regionObjective.type, value)
+}
 
 function getStockoutClass(rate) {
   if (rate <= 0.05) return 'success'
@@ -192,6 +278,8 @@ function getResourceIcon(key) {
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 2px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .report-header h3 {
@@ -218,6 +306,202 @@ function getResourceIcon(key) {
   font-size: 32px;
   font-weight: 800;
   line-height: 1.1;
+}
+
+.score-adjust {
+  font-size: 11px;
+  margin-top: 4px;
+  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.objective-report-section {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #fffbeb, #f0fdf4);
+  border: 2px solid #fbbf24;
+  border-radius: 14px;
+}
+
+.objective-report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.obj-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.obj-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.obj-report-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #78350f;
+  margin: 0 0 4px;
+}
+
+.tier-tag {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+}
+
+.tier-bg-S { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.tier-bg-A { background: linear-gradient(135deg, #10b981, #059669); }
+.tier-bg-B { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.tier-bg-C { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.tier-bg-D { background: linear-gradient(135deg, #64748b, #475569); }
+
+.obj-report-metric {
+  font-size: 13px;
+  color: #78350f;
+}
+
+.obj-report-metric .actual {
+  font-weight: 700;
+  color: #065f46;
+}
+
+.obj-completion {
+  text-align: right;
+}
+
+.completion-percent {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.text-tier-S { color: #d97706; }
+.text-tier-A { color: #059669; }
+.text-tier-B { color: #2563eb; }
+.text-tier-C { color: #7c3aed; }
+.text-tier-D { color: #475569; }
+
+.completion-rewards {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.reward-sp {
+  background: rgba(245, 158, 11, 0.15);
+  color: #92400e;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reward-mul {
+  background: rgba(6, 95, 70, 0.1);
+  color: #065f46;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.obj-progress-big {
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 12px 0 18px;
+}
+
+.big-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.7s ease;
+}
+
+.fill-S { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.fill-A { background: linear-gradient(90deg, #059669, #10b981); }
+.fill-B { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+.fill-C { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+.fill-D { background: linear-gradient(90deg, #475569, #64748b); }
+
+.obj-factors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.factors-col {
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.factors-col.positive {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.factors-col.negative {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.factors-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.positive .factors-title { color: #065f46; }
+.negative .factors-title { color: #991b1b; }
+
+.factors-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.positive .factors-list { color: #047857; }
+.negative .factors-list { color: #b91c1c; }
+
+.obj-suggestions {
+  padding: 12px 14px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px dashed rgba(59, 130, 246, 0.4);
+  border-radius: 10px;
+}
+
+.suggest-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 8px;
+}
+
+.suggest-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #1e3a8a;
 }
 
 .score-breakdown {

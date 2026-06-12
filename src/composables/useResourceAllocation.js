@@ -1,7 +1,9 @@
 import { GAME_PHASES, ROLE_TYPES } from '../config/constants.js'
 import { createSettlementEngine } from '../utils/settlement.js'
+import { createRegionObjectiveEngine } from '../utils/regionObjective.js'
 
 const settlementEngine = createSettlementEngine()
+const regionObjectiveEngine = createRegionObjectiveEngine()
 
 export function useResourceAllocation(gameState, onStateChange) {
   function allocateResource(storeId, resourceType, amount) {
@@ -44,7 +46,34 @@ export function useResourceAllocation(gameState, onStateChange) {
   function confirmAllocation() {
     gameState.role = ROLE_TYPES.REVIEWER
     const result = settlementEngine.calculateRoundResult(gameState.stores)
-    gameState.currentRoundResult = result
+
+    let objectiveResult = null
+    let finalRoundScore = result.summary.roundScore
+    if (gameState.regionObjective) {
+      objectiveResult = regionObjectiveEngine.evaluateRoundObjective(
+        gameState.regionObjective,
+        result.storeResults,
+        gameState.stores
+      )
+      finalRoundScore = Math.round(result.summary.roundScore * objectiveResult.scoreMultiplier) + objectiveResult.bonusSP
+      gameState.regionObjective.roundResults.push({ ...objectiveResult })
+    }
+
+    const finalSummary = {
+      ...result.summary,
+      roundScore: finalRoundScore,
+      baseRoundScore: result.summary.roundScore,
+      objectiveBonusSP: objectiveResult ? objectiveResult.bonusSP : 0,
+      objectiveMultiplier: objectiveResult ? objectiveResult.scoreMultiplier : 1.0
+    }
+
+    const finalResult = {
+      ...result,
+      summary: finalSummary
+    }
+
+    gameState.currentRoundResult = finalResult
+    gameState.currentRoundObjectiveResult = objectiveResult
 
     gameState.stores.forEach((store, idx) => {
       const storeResult = result.storeResults[idx]
@@ -55,7 +84,7 @@ export function useResourceAllocation(gameState, onStateChange) {
 
     gameState.roundResults.push({
       round: gameState.currentRound,
-      ...result
+      ...finalResult
     })
 
     gameState.allocationHistory.push({
