@@ -10,6 +10,16 @@
       @load-game="handleLoadGame"
     />
 
+    <template v-else-if="gameState.phase === 'cycleComplete' && gameState.cycleSummary">
+      <CycleComplete
+        :summary="gameState.cycleSummary"
+        :cycle="gameState.currentCycle"
+        :unlocks="gameState.unlocks"
+        @next-cycle="startNewCycle"
+        @back-to-menu="backToMenu"
+      />
+    </template>
+
     <template v-else>
       <GameHeader
         :total-score="totalScore"
@@ -85,15 +95,6 @@
           @next-round="nextRound"
         />
       </div>
-
-      <CycleComplete
-        v-if="gameState.phase === 'cycleComplete' && gameState.cycleSummary"
-        :summary="gameState.cycleSummary"
-        :cycle="gameState.currentCycle"
-        :unlocks="gameState.unlocks"
-        @next-cycle="startNewCycle"
-        @back-to-menu="backToMenu"
-      />
     </template>
 
     <ConfirmDialog

@@ -55,7 +55,7 @@ export function useResourceAllocation(gameState, onStateChange) {
         result.storeResults,
         gameState.stores
       )
-      finalRoundScore = Math.round(result.summary.roundScore * objectiveResult.scoreMultiplier) + objectiveResult.bonusSP
+      finalRoundScore = Math.round(result.summary.roundScore * objectiveResult.scoreMultiplier)
       gameState.regionObjective.roundResults.push({ ...objectiveResult })
     }
 

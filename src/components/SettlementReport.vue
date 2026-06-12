@@ -7,7 +7,9 @@
         <span class="score-value">{{ result.summary.roundScore }}</span>
         <div v-if="result.summary.objectiveMultiplier && result.summary.objectiveMultiplier !== 1.0" class="score-adjust">
           基础 {{ result.summary.baseRoundScore }} × {{ result.summary.objectiveMultiplier.toFixed(2) }}
-          <span v-if="result.summary.objectiveBonusSP > 0">+{{ result.summary.objectiveBonusSP }}</span>
+        </div>
+        <div v-if="result.summary.objectiveBonusSP > 0" class="score-adjust score-sp">
+          💎 目标奖励策略点 +{{ result.summary.objectiveBonusSP }}
         </div>
       </div>
     </div>
@@ -315,6 +317,12 @@ function getResourceIcon(key) {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
   padding: 2px 6px;
+}
+
+.score-adjust.score-sp {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fffbeb;
+  font-weight: 700;
 }
 
 .objective-report-section {

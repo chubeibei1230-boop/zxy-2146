@@ -97,35 +97,32 @@ export function useRoundFlow(gameState, serializeState, onStateChange) {
 
     let objectiveSummary = null
     let totalBonusSP = 0
-    let avgMultiplier = 1.0
     if (gameState.regionObjective && gameState.regionObjective.roundResults && gameState.regionObjective.roundResults.length > 0) {
       objectiveSummary = regionObjectiveEngine.summarizeCycleObjective(gameState.regionObjective)
       if (objectiveSummary) {
         totalBonusSP = objectiveSummary.totalBonusSP
-        avgMultiplier = objectiveSummary.avgScoreMultiplier
       }
     }
 
-    const finalTotalScore = Math.round(baseSummary.totalScore * avgMultiplier)
     const finalStrategyPoints = baseSummary.strategyPoints + totalBonusSP
     const finalGrade = settlementEngine.calculateGrade(
-      finalTotalScore,
+      baseSummary.totalScore,
       baseSummary.avgSatisfaction,
       baseSummary.avgStockoutRate
     )
 
     const summary = {
       ...baseSummary,
-      totalScore: finalTotalScore,
       strategyPoints: finalStrategyPoints,
       grade: finalGrade,
       objectiveSummary,
       objectiveBonusSP: totalBonusSP,
-      objectiveScoreMultiplier: avgMultiplier
+      objectiveScoreMultiplier: 1.0
     }
 
     gameState.cycleSummary = summary
     gameState.phase = GAME_PHASES.CYCLE_COMPLETE
+    gameState.showReport = false
 
     gameState.unlocks = saveSystem.updateUnlocksWithCycleResult(summary, gameState.currentCycle)
     onStateChange?.()
@@ -178,6 +175,7 @@ export function useRoundFlow(gameState, serializeState, onStateChange) {
     gameState.settings = saved.settings
     gameState.roundResults = saved.roundResults
     gameState.currentRoundResult = saved.currentRoundResult
+    gameState.cycleSummary = saved.cycleSummary || null
     gameState.allocationHistory = saved.allocationHistory || []
     gameState.accumulatedStrategyPoints = saved.accumulatedStrategyPoints || 0
     gameState.unlocks = saveSystem.getUnlocks()
@@ -185,7 +183,7 @@ export function useRoundFlow(gameState, serializeState, onStateChange) {
     gameState.regionObjective = saved.regionObjective || null
     gameState.currentRoundObjectiveResult = saved.currentRoundObjectiveResult || null
 
-    if (!gameState.regionObjective) {
+    if (!gameState.regionObjective && saved.phase !== GAME_PHASES.CYCLE_COMPLETE) {
       gameState.regionObjective = regionObjectiveEngine.generateCycleObjective(
         gameState.settings.difficulty,
         gameState.currentCycle,
