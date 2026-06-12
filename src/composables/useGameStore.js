@@ -43,6 +43,7 @@ export function useGameStore() {
   }
 
   function initGame(settings = {}) {
+    saveSystem.clearSavedGame()
     gameState.settings.storeCount = settings.storeCount || 4
     gameState.settings.difficulty = settings.difficulty || 'normal'
     gameState.currentCycle = settings.cycle || 1
@@ -56,6 +57,7 @@ export function useGameStore() {
 
     initRound()
     gameState.phase = 'planning'
+    saveSystem.saveGame(serializeGameState())
   }
 
   function initRound() {
@@ -103,6 +105,7 @@ export function useGameStore() {
       gameState.resourcePool.remaining[resourceType] = Math.max(0, gameState.resourcePool.remaining[resourceType] - change)
     }
 
+    saveSystem.saveGame(serializeGameState())
     return true
   }
 
@@ -120,6 +123,7 @@ export function useGameStore() {
 
     store.allocatedResources[resourceType] = newAmount
     gameState.resourcePool.remaining[resourceType] -= delta
+    saveSystem.saveGame(serializeGameState())
     return true
   }
 
@@ -171,7 +175,7 @@ export function useGameStore() {
     gameState.phase = 'cycleComplete'
 
     gameState.unlocks = saveSystem.updateUnlocksWithCycleResult(summary, gameState.currentCycle)
-    saveSystem.clearSavedGame()
+    saveSystem.saveGame(serializeGameState())
   }
 
   function startNewCycle() {
@@ -197,11 +201,13 @@ export function useGameStore() {
   }
 
   function backToMenu() {
+    if (gameState.phase !== 'cycleComplete') {
+      saveSystem.clearSavedGame()
+    }
     gameState.phase = 'menu'
     gameState.stores = []
     gameState.roundResults = []
     gameState.currentRoundResult = null
-    gameState.cycleSummary = null
   }
 
   function serializeGameState() {
@@ -215,6 +221,7 @@ export function useGameStore() {
       settings: { ...gameState.settings },
       roundResults: JSON.parse(JSON.stringify(gameState.roundResults)),
       currentRoundResult: gameState.currentRoundResult ? JSON.parse(JSON.stringify(gameState.currentRoundResult)) : null,
+      cycleSummary: gameState.cycleSummary ? JSON.parse(JSON.stringify(gameState.cycleSummary)) : null,
       allocationHistory: JSON.parse(JSON.stringify(gameState.allocationHistory)),
       accumulatedStrategyPoints: gameState.accumulatedStrategyPoints
     }
