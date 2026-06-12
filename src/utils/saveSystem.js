@@ -1,5 +1,7 @@
-const SAVE_KEY = 'store_restock_game_save_v1'
-const UNLOCK_KEY = 'store_restock_game_unlocks_v1'
+import { SAVE_KEYS, GRADE_RANK } from '../config/constants.js'
+
+const SAVE_KEY = SAVE_KEYS.game
+const UNLOCK_KEY = SAVE_KEYS.unlocks
 
 export function createSaveSystem() {
   function saveGame(gameState) {
@@ -89,8 +91,7 @@ export function createSaveSystem() {
     updated.totalStrategyPoints = current.totalStrategyPoints + cycleSummary.strategyPoints
     updated.bestScore = Math.max(current.bestScore, cycleSummary.totalScore)
 
-    const gradeRank = { 'S': 6, 'A': 5, 'B': 4, 'C': 3, 'D': 2 }
-    if (gradeRank[cycleSummary.grade] > gradeRank[current.bestGrade]) {
+    if (GRADE_RANK[cycleSummary.grade] > GRADE_RANK[current.bestGrade]) {
       updated.bestGrade = cycleSummary.grade
     }
 

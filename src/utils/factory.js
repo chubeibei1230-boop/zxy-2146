@@ -1,23 +1,9 @@
-const STORE_NAMES = [
-  '中心旗舰店', '城东社区店', '城西便利站', '南城生活广场', '北城优品店',
-  '科技园分店', '大学城店', '商业步行街店', '居民区服务店', '地铁站店',
-  '机场航站楼店', '购物中心店', '工业园店', '医院旁分店', '公园门口店'
-]
-
-const STORE_TYPES = ['便利店', '超市', '生鲜店', '精品店', '社区店']
-
-const RISK_EVENTS = [
-  { id: 'high_demand', name: '突发高需求', description: '周边举办活动，客流量激增50%', demandMultiplier: 1.5, riskLevel: 2 },
-  { id: 'supply_delay', name: '配送延迟', description: '物流出现问题，配送效率下降30%', deliveryPenalty: 0.3, riskLevel: 2 },
-  { id: 'staff_leave', name: '员工请假潮', description: '多名员工请假，人手效率下降40%', staffPenalty: 0.4, riskLevel: 2 },
-  { id: 'shelf_damage', name: '货架损坏', description: '部分货架损坏，陈列效果下降35%', displayPenalty: 0.35, riskLevel: 1 },
-  { id: 'competitor_promo', name: '竞争对手促销', description: '附近门店大促，顾客流失风险增加', satisfactionPenalty: 0.15, riskLevel: 1 },
-  { id: 'weather_issue', name: '恶劣天气', description: '暴雨/大雪影响客流和配送', demandMultiplier: 0.8, deliveryPenalty: 0.2, riskLevel: 1 },
-  { id: 'holiday_rush', name: '节假日高峰', description: '假期来临，需求和标准双重提升', demandMultiplier: 1.3, satisfactionThreshold: 1.1, riskLevel: 3 },
-  { id: 'inspection', name: '突击检查', description: '监管部门检查，陈列和库存标准提高', displayThreshold: 1.2, stockThreshold: 1.1, riskLevel: 2 },
-  { id: 'new_product', name: '新品上架', description: '新品推出，需要更多陈列和人手', displayMultiplier: 1.3, staffMultiplier: 1.1, riskLevel: 1 },
-  { id: 'system_failure', name: '系统故障', description: '库存系统故障，需更多人手人工盘点', staffMultiplier: 1.4, riskLevel: 2 }
-]
+import {
+  STORE_NAMES,
+  STORE_TYPES,
+  RISK_EVENTS,
+  RESOURCE_INFO
+} from '../config/constants.js'
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
@@ -133,12 +119,7 @@ export function createResourcePoolFactory() {
   }
 
   function getResourceInfo() {
-    return {
-      stock: { name: '库存量', icon: '📦', description: '商品库存数量，直接影响缺货率', costPerPoint: 1 },
-      staff: { name: '人手数量', icon: '👥', description: '门店员工数，影响服务质量和效率', costPerPoint: 1 },
-      delivery: { name: '配送次数', icon: '🚚', description: '补货配送频次，影响库存周转', costPerPoint: 1 },
-      display: { name: '陈列维护', icon: '✨', description: '货架陈列维护，影响顾客体验', costPerPoint: 1 }
-    }
+    return { ...RESOURCE_INFO }
   }
 
   return {
@@ -147,4 +128,4 @@ export function createResourcePoolFactory() {
   }
 }
 
-export { STORE_NAMES, STORE_TYPES, RISK_EVENTS }
+

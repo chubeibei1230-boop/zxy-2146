@@ -1,3 +1,5 @@
+import { GRADE_CRITERIA } from '../config/constants.js'
+
 export function createSettlementEngine() {
   function calculateStockoutRate(store) {
     const { demand, allocatedResources, riskEvent } = store
@@ -177,10 +179,15 @@ export function createSettlementEngine() {
   }
 
   function calculateGrade(totalScore, avgSatisfaction, avgStockoutRate) {
-    if (totalScore >= 8000 && avgSatisfaction >= 0.8 && avgStockoutRate <= 0.08) return 'S'
-    if (totalScore >= 6500 && avgSatisfaction >= 0.7 && avgStockoutRate <= 0.12) return 'A'
-    if (totalScore >= 5000 && avgSatisfaction >= 0.6 && avgStockoutRate <= 0.18) return 'B'
-    if (totalScore >= 3500 && avgSatisfaction >= 0.5) return 'C'
+    for (const criteria of GRADE_CRITERIA) {
+      if (
+        totalScore >= criteria.minScore &&
+        avgSatisfaction >= criteria.minSatisfaction &&
+        avgStockoutRate <= criteria.maxStockoutRate
+      ) {
+        return criteria.grade
+      }
+    }
     return 'D'
   }
 
